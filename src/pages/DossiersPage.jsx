@@ -239,69 +239,6 @@ const DossiersPage = () => {
           Liste et gestion des dossiers de recensement -{" "}
           {new Date().toLocaleDateString("fr-FR")}
         </p>
-
-        {/* Carte de statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">Total des dossiers</p>
-                <h3 className="text-2xl font-bold">{dossiers.length}</h3>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <FileText size={20} className="text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">En attente</p>
-                <h3 className="text-2xl font-bold">
-                  {
-                    dossiers.filter((d) =>
-                      ["Nouveau", "En cours", "Incomplet"].includes(
-                        d.statutDossier
-                      )
-                    ).length
-                  }
-                </h3>
-              </div>
-              <div className="bg-yellow-100 p-3 rounded-full">
-                <Clock size={20} className="text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">Acceptés</p>
-                <h3 className="text-2xl font-bold">
-                  {dossiers.filter((d) => d.statutDossier === "Accepté").length}
-                </h3>
-              </div>
-              <div className="bg-green-100 p-3 rounded-full">
-                <CheckCircle size={20} className="text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-gray-500 text-sm">Rejetés</p>
-                <h3 className="text-2xl font-bold">
-                  {dossiers.filter((d) => d.statutDossier === "Rejeté").length}
-                </h3>
-              </div>
-              <div className="bg-red-100 p-3 rounded-full">
-                <X size={20} className="text-red-600" />
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Filtres et bouton nouveau dossier */}

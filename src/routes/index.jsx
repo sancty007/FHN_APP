@@ -5,12 +5,17 @@ import Layout from "../components/dashboard/Layout";
 import DossiersPage from "../pages/DossiersPage";
 import UtilisateursPage from "../pages/UtilisateursPage";
 import ErrorPage from "../pages/ErrorPage"; // Importez votre page d'erreur personnalisée
+import TuteurPage from "../pages/TuteurPage";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
     errorElement: <ErrorPage />, // Page d'erreur pour cette route
+  },
+  {
+    path: "tuteur",
+    element: <TuteurPage />,
   },
   {
     path: "/",
