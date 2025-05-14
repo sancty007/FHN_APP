@@ -59,7 +59,7 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center bg-gradient-to-br from-orange-400/100 via-white to-green-700/100">
       <div className="max-w-xl w-full px-6">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-md">
