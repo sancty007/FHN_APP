@@ -1,28 +1,34 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { UserPlus, LogIn, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 
 const HomePage = () => {
   const [authMode, setAuthMode] = useState("login");
   const [email, setEmail] = useState("");
-  const [username, setUsername] = useState(""); // Ajout du champ username
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(""); // Pour les messages de succès
-  const [isLoading, setIsLoading] = useState(false); // État de chargement
+  const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     setIsLoaded(true);
-  }, []);
+    if (location.state?.error) {
+      setError(location.state.error);
+      navigate("/", { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   const handleSignup = async () => {
     setError("");
     setSuccess("");
     setIsLoading(true);
 
-    // Validation des champs
     if (!email || !username || !password || !confirmPassword) {
       setError("Veuillez remplir tous les champs.");
       setIsLoading(false);
@@ -36,7 +42,6 @@ const HomePage = () => {
     }
 
     try {
-      // Appel à l'API
       const response = await fetch(
         "https://fhn-backend-2.onrender.com/auth/register",
         {
@@ -45,11 +50,11 @@ const HomePage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            name: username, // Correspond au champ "name" dans le backend
+            name: username,
             email,
             password,
           }),
-          credentials: "include", // Pour inclure les cookies (authToken)
+          credentials: "include",
         }
       );
 
@@ -58,8 +63,7 @@ const HomePage = () => {
       if (!response.ok) {
         throw new Error(data.message || "Erreur lors de l'inscription");
       }
-      console.log(data);
-      // Succès
+
       setSuccess(
         "Compte créé avec succès ! Vous pouvez maintenant vous connecter."
       );
@@ -74,17 +78,65 @@ const HomePage = () => {
     }
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
     setSuccess("");
+    setIsLoading(true);
 
     if (!email || !password) {
       setError("Veuillez remplir tous les champs.");
+      setIsLoading(false);
       return;
     }
 
-    // TODO: Ajouter la logique pour consommer l'endpoint de login si disponible
-    console.log("Connexion avec:", { email, password });
+    try {
+      const response = await fetch(
+        "https://fhn-backend-2.onrender.com/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+          credentials: "include",
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Erreur lors de la connexion");
+      }
+
+      // Stocker les informations utilisateur dans localStorage
+      localStorage.setItem(
+        "authUser",
+        JSON.stringify({
+          userId: data.data.userId,
+          email: data.data.email,
+          role: data.data.role,
+        })
+      );
+
+      setSuccess("Connexion réussie !");
+      setEmail("");
+      setPassword("");
+      console.log("Utilisateur connecté:", data.data);
+
+      // Redirection basée sur le rôle
+      if (data.data.role === "parent") {
+        navigate("/tuteur");
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleModeChange = (mode) => {
@@ -130,7 +182,6 @@ const HomePage = () => {
             </div>
 
             <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
-              {/* Onglets de navigation */}
               <div className="flex mb-8 border-b">
                 <div
                   className={`flex-1 text-center py-3 cursor-pointer transition-all ${
@@ -184,7 +235,6 @@ const HomePage = () => {
               )}
 
               <div className="space-y-4">
-                {/* Champ Username (uniquement pour signup) */}
                 {authMode === "signup" && (
                   <div>
                     <label
@@ -209,7 +259,6 @@ const HomePage = () => {
                   </div>
                 )}
 
-                {/* Champ Email */}
                 <div>
                   <label
                     htmlFor="email"
@@ -232,7 +281,6 @@ const HomePage = () => {
                   </div>
                 </div>
 
-                {/* Champ Mot de passe */}
                 <div>
                   <label
                     htmlFor="password"
@@ -265,7 +313,6 @@ const HomePage = () => {
                   </div>
                 </div>
 
-                {/* Champ Confirmer le mot de passe (signup) */}
                 {authMode === "signup" && (
                   <div>
                     <label

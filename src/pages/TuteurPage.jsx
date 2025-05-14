@@ -13,12 +13,14 @@ import {
   LogOut,
   User,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // Ajouté pour la déconnexion
 
 const TuteurPage = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [showNewRequestForm, setShowNewRequestForm] = useState(false);
   const [selectedDossier, setSelectedDossier] = useState(null);
+  const navigate = useNavigate(); // Ajouté pour la déconnexion
 
   // État du formulaire
   const [formData, setFormData] = useState({
@@ -193,6 +195,12 @@ const TuteurPage = () => {
     setShowNewRequestForm(false);
   };
 
+  // Fonction de déconnexion
+  const handleLogout = () => {
+    localStorage.removeItem("authUser"); // Supprimer les données utilisateur
+    navigate("/"); // Rediriger vers la page d'accueil
+  };
+
   // Helper pour afficher le statut
   const StatusBadge = ({ status }) => {
     const statusConfig = {
@@ -253,7 +261,10 @@ const TuteurPage = () => {
               <User size={16} className="mr-1" />
               <span>Parent</span>
             </div>
-            <button className="flex items-center text-sm text-gray-500 hover:text-gray-700">
+            <button
+              onClick={handleLogout}
+              className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+            >
               <LogOut size={16} className="mr-1" />
               <span>Déconnexion</span>
             </button>
@@ -370,11 +381,12 @@ const TuteurPage = () => {
                                 dossier.observations.length - 1
                               ].texte
                             }{" "}
-                            -
-                            {" " +
+                            -{" "}
+                            {
                               dossier.observations[
                                 dossier.observations.length - 1
-                              ].date}
+                              ].date
+                            }
                           </p>
                         </div>
                       </div>

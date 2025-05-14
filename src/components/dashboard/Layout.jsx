@@ -1,6 +1,14 @@
 import { useState } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { Users, FileText, BarChart2, Menu, X, UserCog } from "lucide-react";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom"; // Ajouté useNavigate
+import {
+  Users,
+  FileText,
+  BarChart2,
+  Menu,
+  X,
+  UserCog,
+  LogOut,
+} from "lucide-react"; // Ajouté LogOut
 
 // Logo FHN avec dégradé
 const FHNLogo = () => {
@@ -16,6 +24,7 @@ const FHNLogo = () => {
 // Composant pour la sidebar
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
+  const navigate = useNavigate(); // Ajouté pour la déconnexion
 
   const menuItems = [
     {
@@ -34,6 +43,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       path: "/utilisateurs",
     },
   ];
+
+  // Fonction de déconnexion
+  const handleLogout = () => {
+    localStorage.removeItem("authUser"); // Supprimer les données utilisateur
+    navigate("/"); // Rediriger vers la page d'accueil
+  };
 
   return (
     <>
@@ -91,6 +106,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               <p className="text-xs text-green-200">admin@fhn.org</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="mt-4 flex items-center w-full text-sm text-green-200 hover:text-white"
+          >
+            <LogOut size={16} className="mr-2" />
+            Déconnexion
+          </button>
         </div>
       </aside>
     </>
@@ -99,6 +121,14 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
 // Header mobile
 const MobileHeader = ({ toggleSidebar }) => {
+  const navigate = useNavigate(); // Ajouté pour la déconnexion
+
+  // Fonction de déconnexion
+  const handleLogout = () => {
+    localStorage.removeItem("authUser"); // Supprimer les données utilisateur
+    navigate("/"); // Rediriger vers la page d'accueil
+  };
+
   return (
     <header className="bg-white shadow-sm lg:hidden">
       <div className="px-4 py-3 flex items-center justify-between">
@@ -109,9 +139,13 @@ const MobileHeader = ({ toggleSidebar }) => {
           <FHNLogo />
           <h1 className="text-lg font-bold text-green-700 ml-2">Admin</h1>
         </div>
-        <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center text-white">
-          <span className="font-medium text-xs">AD</span>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+        >
+          <LogOut size={16} className="mr-1" />
+          <span>Déconnexion</span>
+        </button>
       </div>
     </header>
   );
