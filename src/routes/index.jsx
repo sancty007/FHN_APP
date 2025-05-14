@@ -1,16 +1,33 @@
 import { createBrowserRouter } from "react-router-dom";
-
-import MainLayout from "../components/home/MainLayout";
 import HomePage from "../pages/HomePage";
+import DashboardPage from "../pages/DashboardPage";
+import Layout from "../components/dashboard/Layout";
+import DossiersPage from "../pages/DossiersPage";
+import UtilisateursPage from "../pages/UtilisateursPage";
+import ErrorPage from "../pages/ErrorPage"; // Importez votre page d'erreur personnalisée
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <MainLayout />,
+    element: <HomePage />,
+    errorElement: <ErrorPage />, // Page d'erreur pour cette route
+  },
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <ErrorPage />, // Page d'erreur pour ce groupe de routes
     children: [
       {
-        index: true,
-        element: <HomePage />,
+        path: "dashboard",
+        element: <DashboardPage />,
+      },
+      {
+        path: "dossiers",
+        element: <DossiersPage />,
+      },
+      {
+        path: "utilisateurs",
+        element: <UtilisateursPage />,
       },
     ],
   },
