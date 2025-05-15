@@ -26,10 +26,8 @@ const HomePage = () => {
 
     const checkAuth = async () => {
       try {
-        // Check for token in localStorage
         const token = localStorage.getItem("authToken");
 
-        // Build headers with Authorization if token exists
         const headers = {
           Accept: "application/json",
         };
@@ -115,10 +113,15 @@ const HomePage = () => {
       if (!response.ok)
         throw new Error(data.message || "Erreur lors de l'inscription");
 
-      // Store token from response
-      if (data.data?.token) {
+      // Store token and user data from response
+      if (data.data) {
         localStorage.setItem("authToken", data.data.token);
-        console.log("Token stocké dans localStorage après inscription");
+        localStorage.setItem("nom", data.data.nom || username);
+        localStorage.setItem("email", data.data.email || email);
+        localStorage.setItem("role", data.data.role || "");
+        console.log(
+          "Données utilisateur stockées dans localStorage après inscription"
+        );
       }
 
       setSuccess(
@@ -134,8 +137,13 @@ const HomePage = () => {
         setIsAuthenticated(true);
         if (data.data?.role === "parent") {
           navigate("/tuteur");
-        } else {
+        } else if (
+          data.data?.role === "analyste" ||
+          data.data?.role === "secretaire"
+        ) {
           navigate("/dashboard");
+        } else {
+          navigate("/utilisateurs"); // Redirection pour admin ou autres rôles
         }
       }, 1500);
     } catch (err) {
@@ -175,10 +183,15 @@ const HomePage = () => {
       if (!response.ok)
         throw new Error(data.message || "Erreur lors de la connexion");
 
-      // Store token from response
-      if (data.data?.token) {
+      // Store token and user data from response
+      if (data.data) {
         localStorage.setItem("authToken", data.data.token);
-        console.log("Token stocké dans localStorage après connexion");
+        localStorage.setItem("nom", data.data.nom || "");
+        localStorage.setItem("email", data.data.email || email);
+        localStorage.setItem("role", data.data.role || "");
+        console.log(
+          "Données utilisateur stockées dans localStorage après connexion"
+        );
       }
 
       setSuccess("Connexion réussie !");
@@ -189,8 +202,13 @@ const HomePage = () => {
       setTimeout(() => {
         if (data.data?.role === "parent") {
           navigate("/tuteur");
-        } else {
+        } else if (
+          data.data?.role === "analyste" ||
+          data.data?.role === "secretaire"
+        ) {
           navigate("/dashboard");
+        } else {
+          navigate("/utilisateurs"); // Redirection pour admin ou autres rôles
         }
       }, 500);
     } catch (err) {
@@ -203,7 +221,6 @@ const HomePage = () => {
 
   const handleLogout = async () => {
     try {
-      // Get token from localStorage for authorization header
       const token = localStorage.getItem("authToken");
       const headers = {};
 
@@ -211,15 +228,17 @@ const HomePage = () => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      // Call logout endpoint
       await fetch("https://fhn-backend-2.onrender.com/auth/logout", {
         method: "POST",
         credentials: "include",
         headers,
       });
 
-      // Remove token from localStorage
+      // Remove all user data from localStorage
       localStorage.removeItem("authToken");
+      localStorage.removeItem("nom");
+      localStorage.removeItem("email");
+      localStorage.removeItem("role");
 
       setIsAuthenticated(false);
       navigate("/");
@@ -229,6 +248,9 @@ const HomePage = () => {
 
       // Disconnect user client-side even if API fails
       localStorage.removeItem("authToken");
+      localStorage.removeItem("nom");
+      localStorage.removeItem("email");
+      localStorage.removeItem("role");
       setIsAuthenticated(false);
       navigate("/");
     }
@@ -355,7 +377,7 @@ const HomePage = () => {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
+                  className="block text-sm font-medium the-gray-700 mb-1"
                 >
                   Adresse email
                 </label>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom"; // Ajouté useNavigate
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Users,
   FileText,
@@ -8,7 +8,7 @@ import {
   X,
   UserCog,
   LogOut,
-} from "lucide-react"; // Ajouté LogOut
+} from "lucide-react";
 
 // Logo FHN avec dégradé
 const FHNLogo = () => {
@@ -24,29 +24,51 @@ const FHNLogo = () => {
 // Composant pour la sidebar
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
-  const navigate = useNavigate(); // Ajouté pour la déconnexion
+  const navigate = useNavigate();
 
+  // Récupérer les données utilisateur depuis localStorage
+  const userNom = localStorage.getItem("nom") || "Utilisateur";
+  const userEmail = localStorage.getItem("email") || "email@non.defini";
+  const userRole = localStorage.getItem("role") || "";
+
+  // Définir les éléments du menu
   const menuItems = [
     {
       name: "Tableau de bord",
       icon: <BarChart2 size={20} />,
       path: "/dashboard",
+      roles: ["analyste", "secretaire"], // Visible pour analyste et secretaire
     },
     {
       name: "Gestion des Dossiers",
       icon: <FileText size={20} />,
       path: "/dossiers",
+      roles: ["analyste", "secretaire"], // Visible pour analyste et secretaire
     },
     {
       name: "Gestion des utilisateurs",
       icon: <UserCog size={20} />,
       path: "/utilisateurs",
+      roles: [], // Visible pour tous les autres rôles
     },
   ];
 
+  // Filtrer les éléments du menu selon le rôle
+  const filteredMenuItems = menuItems.filter((item) => {
+    if (item.roles.length === 0) {
+      // Afficher pour tous les rôles sauf analyste et secretaire
+      return !["analyste", "secretaire"].includes(userRole);
+    }
+    return item.roles.includes(userRole);
+  });
+
   // Fonction de déconnexion
   const handleLogout = () => {
-    localStorage.removeItem("authUser"); // Supprimer les données utilisateur
+    // Supprimer toutes les données utilisateur du localStorage
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("nom");
+    localStorage.removeItem("email");
+    localStorage.removeItem("role");
     navigate("/"); // Rediriger vers la page d'accueil
   };
 
@@ -79,7 +101,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
             </button>
           </div>
           <div className="mt-8 space-y-1">
-            {menuItems.map((item, index) => (
+            {filteredMenuItems.map((item, index) => (
               <NavLink
                 key={index}
                 to={item.path}
@@ -99,11 +121,13 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         <div className="absolute bottom-0 w-full p-6">
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center">
-              <span className="font-medium text-sm">AD</span>
+              <span className="font-medium text-sm">
+                {userNom.charAt(0).toUpperCase()}
+              </span>
             </div>
             <div>
-              <p className="text-sm font-medium">Admin User</p>
-              <p className="text-xs text-green-200">admin@fhn.org</p>
+              <p className="text-sm font-medium">{userNom}</p>
+              <p className="text-xs text-green-200">{userEmail}</p>
             </div>
           </div>
           <button
@@ -121,11 +145,15 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 
 // Header mobile
 const MobileHeader = ({ toggleSidebar }) => {
-  const navigate = useNavigate(); // Ajouté pour la déconnexion
+  const navigate = useNavigate();
 
   // Fonction de déconnexion
   const handleLogout = () => {
-    localStorage.removeItem("authUser"); // Supprimer les données utilisateur
+    // Supprimer toutes les données utilisateur du localStorage
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("nom");
+    localStorage.removeItem("email");
+    localStorage.removeItem("role");
     navigate("/"); // Rediriger vers la page d'accueil
   };
 

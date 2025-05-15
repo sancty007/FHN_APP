@@ -19,36 +19,32 @@ const TuteurPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showNewRequestForm, setShowNewRequestForm] = useState(false);
   const [selectedDossier, setSelectedDossier] = useState(null);
-  const [formType, setFormType] = useState(null); // null, "TARII", ou "WISI"
-  const [currentStep, setCurrentStep] = useState(1); // Étape actuelle du formulaire
   const navigate = useNavigate();
 
-  // Liste des types de documents autorisés
+  // Types de documents avec ID numérique
   const documentTypes = [
-    { value: "acte_naissance", label: "Photocopie de l’acte de naissance" },
-    { value: "livret_familial", label: "Livret familial" },
-    { value: "carte_identite", label: "Photocopie de la carte d’identité" },
-    { value: "carte_sejour", label: "Carte de séjour des responsables légaux" },
+    { id: 1, value: "acte_naissance", label: "Acte de naissance" },
+    { id: 2, value: "livret_familial", label: "Livret familial" },
+    { id: 3, value: "carte_identite", label: "Carte d’identité" },
+    { id: 4, value: "carte_sejour", label: "Carte de séjour" },
+    { id: 5, value: "carnet_vaccinations", label: "Carnet de vaccinations" },
+    { id: 6, value: "bilan_ophtalmologique", label: "Bilan ophtalmologique" },
+    { id: 7, value: "bilan_orthoptique", label: "Bilan orthoptique" },
     {
-      value: "carnet_vaccinations",
-      label: "Photocopie du carnet de vaccinations",
-    },
-    {
-      value: "bilan_ophtalmologique",
-      label: "Photocopie du bilan ophtalmologique",
-    },
-    { value: "bilan_orthoptique", label: "Photocopie du bilan orthoptique" },
-    {
+      id: 8,
       value: "comptes_rendus_medicaux",
-      label: "Photocopie des comptes rendus médicaux",
+      label: "Comptes rendus médicaux",
     },
     {
+      id: 9,
       value: "comptes_rendus_paramedicaux",
-      label: "Photocopie des comptes rendus paramédicaux",
+      label: "Comptes rendus paramédicaux",
     },
   ];
 
   // État du formulaire
+  const [formType, setFormType] = useState(null); // null, "TARII", ou "WISI"
+  const [currentStep, setCurrentStep] = useState(1); // Étape actuelle
   const [formData, setFormData] = useState({
     nom: "",
     dateNaissance: "",
@@ -75,7 +71,7 @@ const TuteurPage = () => {
     psychomotricien: false,
     tradipracticien: false,
     etablissementId: null,
-    dateCreation: new Date().toISOString().split("T")[0], // Default to today’s date
+    dateCreation: new Date().toISOString().split("T")[0],
   });
 
   // État des dossiers
@@ -91,7 +87,7 @@ const TuteurPage = () => {
       }
 
       const response = await fetch(
-        "https://fhn-backend-2.onrender.com/dossier-enfant",
+        "https://fhn-backend-2.onrender.com/dossier_enfant",
         {
           method: "GET",
           headers: {
@@ -145,7 +141,7 @@ const TuteurPage = () => {
 
   const stats = getStatsByStatus();
 
-  // Gestion du formulaire
+  // Gestion des inputs
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -154,12 +150,12 @@ const TuteurPage = () => {
     }));
   };
 
-  // Gestion du téléversement de fichiers
+  // Gestion des fichiers
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
     const newDocuments = files.map((file) => ({
       file,
-      type: "",
+      type: "", // Initialisé à vide, l'utilisateur choisira l'ID
     }));
     setFormData((prev) => ({
       ...prev,
@@ -167,21 +163,21 @@ const TuteurPage = () => {
     }));
   };
 
-  // Mise à jour du type de document
-  const handleDocumentTypeChange = (index, type) => {
+  // Mise à jour du type de document (stocke l'ID numérique)
+  const handleDocumentTypeChange = (index, id) => {
     setFormData((prev) => {
       const updatedDocuments = [...prev.documents];
-      updatedDocuments[index].type = type;
+      updatedDocuments[index].type = id; // Stocker l'ID (nombre)
       return { ...prev, documents: updatedDocuments };
     });
   };
 
   // Suppression d'un document
   const handleRemoveDocument = (index) => {
-    setFormData((prev) => {
-      const updatedDocuments = prev.documents.filter((_, i) => i !== index);
-      return { ...prev, documents: updatedDocuments };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      documents: prev.documents.filter((_, i) => i !== index),
+    }));
   };
 
   // Réinitialiser le formulaire
@@ -216,149 +212,10 @@ const TuteurPage = () => {
     });
     setCurrentStep(1);
     setFormType(null);
+    setShowNewRequestForm(false);
   };
 
-  // Soumission du formulaire
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Vérifier que tous les documents ont un type
-    if (formData.documents.some((doc) => !doc.type)) {
-      alert("Veuillez sélectionner un type pour chaque document téléversé.");
-      return;
-    }
-
-    // Valider tous les champs requis
-    const requiredFields = {
-      nom: "Le nom est requis",
-      dateNaissance: "La date de naissance est requise",
-      sexe: "Le sexe est requis",
-      commune: "La commune est requise",
-      diagnostic: "Le diagnostic est requis",
-      parentNom: "Le nom du parent est requis",
-      parentTelephone: "Le téléphone du parent est requis",
-      parentEmail: "L'email du parent est requis",
-      dateCreation: "La date de création est requise",
-      estScolarise: "Le statut de scolarisation est requis",
-      etablissementId: "L’établissement est requis",
-    };
-
-    const errors = Object.keys(requiredFields)
-      .filter((key) => {
-        const value = formData[key];
-        return value === "" || value === null || value === undefined;
-      })
-      .map((key) => requiredFields[key]);
-
-    if (errors.length > 0) {
-      alert("Erreur(s) dans le formulaire :\n- " + errors.join("\n- "));
-      return;
-    }
-
-    // Créer un FormData pour envoyer les données et fichiers
-    const formDataToSend = new FormData();
-
-    // Mapper les champs camelCase à snake_case
-    const fieldMapping = {
-      nom: "nom",
-      dateNaissance: "date_de_naissance",
-      sexe: "sexe",
-      commune: "commune",
-      diagnostic: "diagnostic",
-      estScolarise: "est_scolarise",
-      niveauScolaire: "niveau_scolaire",
-      ancienEtablissement: "ancien_etablissement",
-      activitesQuotidiennes: "activites_quotidiennes",
-      parentNom: "parent_nom",
-      parentTelephone: "parent_telephone",
-      parentEmail: "parent_email",
-      attente: "attente",
-      observation: "observation",
-      aConsulteOphtalmo: "a_consulte_ophtalmo",
-      aAutreSuiviMedical: "a_autre_suivi_medical",
-      detailsSuiviMedical: "details_suivi_medical",
-      aPerceptionVisuelle: "a_perception_visuelle",
-      estAveugle: "est_aveugle",
-      suiviOrthophonique: "suivi_orthophonique",
-      suiviPsychologique: "suivi_psychologique",
-      psychomotricien: "psychomotricien",
-      tradipracticien: "tradipracticien",
-      etablissementId: "etablissement_id",
-      dateCreation: "date_creation",
-    };
-
-    Object.keys(formData).forEach((key) => {
-      if (key === "documents") return; // Gérer les documents séparément
-      const value = formData[key];
-      if (value !== undefined && value !== null) {
-        const backendKey = fieldMapping[key] || key;
-        formDataToSend.append(backendKey, value.toString());
-      }
-    });
-
-    // Ajouter les documents
-    formData.documents.forEach((doc, index) => {
-      formDataToSend.append(`documents[${index}][file]`, doc.file);
-      formDataToSend.append(`documents[${index}][type]`, doc.type);
-    });
-
-    try {
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        alert("Vous devez être connecté pour soumettre une demande.");
-        navigate("/");
-        return;
-      }
-
-      const response = await fetch(
-        "https://fhn-backend-2.onrender.com/dossier-enfant",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataToSend,
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (result.errors && Array.isArray(result.errors)) {
-          const errorMessages = result.errors
-            .map((err) => err.msg || err.message)
-            .join("\n- ");
-          throw new Error("Erreur(s) de validation :\n- " + errorMessages);
-        }
-        throw new Error(
-          result.message || "Erreur lors de la soumission du dossier."
-        );
-      }
-
-      await fetchDossiers();
-      resetForm();
-      setShowNewRequestForm(false);
-      alert("Demande soumise avec succès !");
-    } catch (error) {
-      console.error("Erreur lors de la soumission:", error);
-      alert(error.message || "Une erreur est survenue lors de la soumission.");
-    }
-  };
-
-  // Navigation entre les étapes
-  const nextStep = () => {
-    if (validateStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, 3));
-    } else {
-      alert("Veuillez remplir tous les champs requis avant de continuer.");
-    }
-  };
-
-  const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
-
-  // Validation des champs requis par étape
+  // Validation par étape
   const validateStep = () => {
     if (currentStep === 1) {
       return (
@@ -386,6 +243,139 @@ const TuteurPage = () => {
       return formData.attente && formData.observation;
     }
     return true;
+  };
+
+  // Navigation entre étapes
+  const nextStep = () => {
+    if (validateStep()) {
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
+    } else {
+      alert("Veuillez remplir tous les champs requis.");
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
+  // Soumission du formulaire
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Vérifier les documents
+    if (formData.documents.some((doc) => !doc.type)) {
+      alert("Veuillez sélectionner un type pour chaque document.");
+      return;
+    }
+
+    // Créer FormData
+    const formDataToSend = new FormData();
+
+    // Champs communs
+    const fields = {
+      nom: formData.nom,
+      date_naissance: formData.dateNaissance,
+      sexe: formData.sexe === "Masculin" ? "M" : "F",
+      commune: formData.commune,
+      diagnostic: formData.diagnostic,
+      est_scolarise: formData.estScolarise,
+      niveau_scolaire: formData.niveauScolaire || "",
+      ancien_etablissement: formData.ancienEtablissement || "",
+      activites_quotidiennes: formData.activitesQuotidiennes,
+      parentNom: formData.parentNom,
+      parentTelephone: formData.parentTelephone,
+      parentEmail: formData.parentEmail,
+      attente: formData.attente || "",
+      observation: formData.observation || "",
+      etablissementId: formData.etablissementId.toString(),
+      date_creation: formData.dateCreation,
+    };
+
+    // Champs spécifiques
+    if (formData.etablissementId === 1) {
+      fields.suivi_orthophonique = formData.suiviOrthophonique;
+      fields.suivi_psychologique = formData.suiviPsychologique;
+      fields.psychomotricien = formData.psychomotricien;
+      fields.tradipracticien = formData.tradipracticien;
+    } else if (formData.etablissementId === 2) {
+      fields.a_consulte_ophtalmo = formData.aConsulteOphtalmo;
+      fields.a_autre_suivi_medical = formData.aAutreSuiviMedical;
+      fields.details_suivi_medical = formData.detailsSuiviMedical || "";
+      fields.a_perception_visuelle = formData.aPerceptionVisuelle;
+      fields.est_aveugle = formData.estAveugle;
+    }
+
+    // Ajouter les champs
+    Object.keys(fields).forEach((key) => {
+      const value = fields[key];
+      if (value !== undefined && value !== null) {
+        formDataToSend.append(key, value.toString());
+      }
+    });
+
+    // Ajouter fichiers et filesInfo (natureId est une chaîne de caractères numérique)
+    const filesInfo = formData.documents.map((doc) => ({
+      natureId: doc.type.toString(), // Convertir l'ID en chaîne
+    }));
+
+    formData.documents.forEach((doc) => {
+      formDataToSend.append("fichiers", doc.file);
+    });
+
+    formDataToSend.append("filesInfo", JSON.stringify(filesInfo));
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error("Aucun token trouvé dans localStorage");
+        alert("Vous devez être connecté.");
+        navigate("/");
+        return;
+      }
+
+      console.log("Envoi de la requête POST avec les données suivantes:");
+      console.log("Headers:", { Authorization: `Bearer ${token}` });
+      console.log("FormData:");
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`${key}:`, value);
+      }
+
+      const response = await fetch(
+        "https://fhn-backend-2.onrender.com/dossier_enfant",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formDataToSend,
+        }
+      );
+
+      const result = await response.json();
+      console.log("Réponse du serveur:", result);
+
+      if (!response.ok) {
+        console.error("Erreur serveur:", { status: response.status, result });
+        if (result.errors && Array.isArray(result.errors)) {
+          const errorMessages = result.errors
+            .map((err) => err.msg || err.message)
+            .join("\n- ");
+          alert("Erreur(s) de validation :\n- " + errorMessages);
+        } else {
+          alert(
+            result.message || `Erreur ${response.status}: Problème serveur.`
+          );
+        }
+        return;
+      }
+
+      await fetchDossiers(); // Refresh dossier list
+      resetForm();
+      alert("Demande soumise avec succès !");
+    } catch (error) {
+      console.error("Erreur lors de la soumission:", error);
+      alert(`Une erreur est survenue : ${error.message}`);
+    }
   };
 
   // Helper pour afficher le statut
@@ -631,7 +621,7 @@ const TuteurPage = () => {
               </button>
             </div>
 
-            {/* Formulaire de nouvelle demande */}
+            {/* Formulaire */}
             {showNewRequestForm && (
               <div className="bg-white rounded-xl shadow mb-6">
                 <div className="px-6 py-4 border-b border-gray-200">
@@ -640,7 +630,7 @@ const TuteurPage = () => {
                   </h3>
                 </div>
 
-                {/* Choix du type de formulaire */}
+                {/* Choix du type */}
                 {!formType && (
                   <div className="p-6">
                     <h4 className="text-md font-medium text-gray-900 mb-4">
@@ -654,9 +644,6 @@ const TuteurPage = () => {
                             ...prev,
                             etablissementId: 1,
                             diagnostic: "Trouble du spectre autistique",
-                            dateCreation: new Date()
-                              .toISOString()
-                              .split("T")[0],
                           }));
                         }}
                         className="p-4 border border-gray-300 rounded-md text-left hover:bg-gray-50"
@@ -665,8 +652,7 @@ const TuteurPage = () => {
                           TARII - Déficience intellectuelle
                         </h5>
                         <p className="text-sm text-gray-500">
-                          Pour les enfants avec des troubles comme l'autisme ou
-                          autres déficiences intellectuelles.
+                          Pour autisme ou déficiences intellectuelles.
                         </p>
                       </button>
                       <button
@@ -676,9 +662,6 @@ const TuteurPage = () => {
                             ...prev,
                             etablissementId: 2,
                             diagnostic: "Déficience visuelle",
-                            dateCreation: new Date()
-                              .toISOString()
-                              .split("T")[0],
                           }));
                         }}
                         className="p-4 border border-gray-300 rounded-md text-left hover:bg-gray-50"
@@ -687,17 +670,13 @@ const TuteurPage = () => {
                           WISI - Déficience visuelle
                         </h5>
                         <p className="text-sm text-gray-500">
-                          Pour les enfants avec des déficiences visuelles,
-                          incluant la cécité ou basse vision.
+                          Pour cécité ou basse vision.
                         </p>
                       </button>
                     </div>
                     <div className="mt-6 flex justify-end">
                       <button
-                        onClick={() => {
-                          resetForm();
-                          setShowNewRequestForm(false);
-                        }}
+                        onClick={resetForm}
                         className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                       >
                         Annuler
@@ -709,7 +688,7 @@ const TuteurPage = () => {
                 {/* Formulaire multi-étapes */}
                 {formType && (
                   <form onSubmit={handleSubmit} className="p-6">
-                    {/* Barre de progression */}
+                    {/* Progression */}
                     <div className="mb-6">
                       <div className="flex justify-between mb-2">
                         <span
@@ -719,7 +698,7 @@ const TuteurPage = () => {
                               : "text-gray-500"
                           }`}
                         >
-                          Étape 1: Enfant
+                          Enfant
                         </span>
                         <span
                           className={`text-sm font-medium ${
@@ -728,7 +707,7 @@ const TuteurPage = () => {
                               : "text-gray-500"
                           }`}
                         >
-                          Étape 2: Parent/Documents
+                          Parent/Documents
                         </span>
                         <span
                           className={`text-sm font-medium ${
@@ -737,7 +716,7 @@ const TuteurPage = () => {
                               : "text-gray-500"
                           }`}
                         >
-                          Étape 3: Détails
+                          Détails
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -748,7 +727,7 @@ const TuteurPage = () => {
                       </div>
                     </div>
 
-                    {/* Étape 1: Informations sur l'enfant */}
+                    {/* Étape 1: Enfant */}
                     {currentStep === 1 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
@@ -760,7 +739,7 @@ const TuteurPage = () => {
                               htmlFor="nom"
                               className="block text-sm font-medium text-gray-700"
                             >
-                              Nom complet
+                              Nom
                             </label>
                             <input
                               type="text"
@@ -847,7 +826,7 @@ const TuteurPage = () => {
                         </div>
                         <div className="space-y-4">
                           <h4 className="text-md font-medium text-gray-900">
-                            Scolarisation et activités
+                            Scolarisation
                           </h4>
                           <div>
                             <label className="flex items-center">
@@ -859,7 +838,7 @@ const TuteurPage = () => {
                                 className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                               />
                               <span className="ml-2 text-sm text-gray-700">
-                                L'enfant est scolarisé
+                                Enfant scolarisé
                               </span>
                             </label>
                           </div>
@@ -920,19 +899,19 @@ const TuteurPage = () => {
                       </div>
                     )}
 
-                    {/* Étape 2: Informations sur le parent/tuteur et documents */}
+                    {/* Étape 2: Parent/Documents */}
                     {currentStep === 2 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                           <h4 className="text-md font-medium text-gray-900">
-                            Informations sur le parent/tuteur
+                            Parent/Tuteur
                           </h4>
                           <div>
                             <label
                               htmlFor="parentNom"
                               className="block text-sm font-medium text-gray-700"
                             >
-                              Nom complet
+                              Nom
                             </label>
                             <input
                               type="text"
@@ -1014,9 +993,8 @@ const TuteurPage = () => {
                               </div>
                             </div>
                           </div>
-                          {/* Liste des documents téléversés */}
                           {formData.documents.length > 0 && (
-                            <div className="mt-4">
+                            <div>
                               <h5 className="text-sm font-medium text-gray-700 mb-2">
                                 Documents téléversés
                               </h5>
@@ -1039,19 +1017,14 @@ const TuteurPage = () => {
                                         onChange={(e) =>
                                           handleDocumentTypeChange(
                                             idx,
-                                            e.target.value
+                                            parseInt(e.target.value)
                                           )
                                         }
                                         className="block w-48 border border-gray-300 rounded-md shadow-sm py-1 px-2 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
                                       >
-                                        <option value="">
-                                          Sélectionner le type
-                                        </option>
+                                        <option value="">Type</option>
                                         {documentTypes.map((type) => (
-                                          <option
-                                            key={type.value}
-                                            value={type.value}
-                                          >
+                                          <option key={type.id} value={type.id}>
                                             {type.label}
                                           </option>
                                         ))}
@@ -1075,7 +1048,7 @@ const TuteurPage = () => {
                       </div>
                     )}
 
-                    {/* Étape 3: Détails spécifiques */}
+                    {/* Étape 3: Détails */}
                     {currentStep === 3 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
@@ -1265,14 +1238,13 @@ const TuteurPage = () => {
                       </div>
                     )}
 
-                    {/* Navigation entre étapes */}
+                    {/* Navigation */}
                     <div className="mt-6 flex justify-between">
                       <button
                         type="button"
                         onClick={() => {
                           if (currentStep === 1) {
                             resetForm();
-                            setShowNewRequestForm(false);
                           } else {
                             prevStep();
                           }
@@ -1281,12 +1253,12 @@ const TuteurPage = () => {
                       >
                         {currentStep === 1 ? "Annuler" : "Précédent"}
                       </button>
-                      <div className="flex space-x-3">
+                      <div>
                         {currentStep < 3 && (
                           <button
                             type="button"
                             onClick={nextStep}
-                            className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                           >
                             Suivant
                           </button>
@@ -1294,9 +1266,9 @@ const TuteurPage = () => {
                         {currentStep === 3 && (
                           <button
                             type="submit"
-                            className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
                           >
-                            Soumettre la demande
+                            Soumettre
                           </button>
                         )}
                       </div>
