@@ -120,6 +120,7 @@ export function UserModal({ showModal, setShowModal, onUserCreated }) {
       }
 
       onUserCreated(responseData);
+
       toast({
         title: "Utilisateur créé",
         description: "L'utilisateur a été créé avec succès",
@@ -260,7 +261,7 @@ export function UserModal({ showModal, setShowModal, onUserCreated }) {
               disabled={isSubmitting}
               className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Enregistrement..." : "Enregistrer"}
+              {isSubmitting ? <span>Enregistrement... </span> : "Enregistrer"}
             </button>
           </form>
         </div>
