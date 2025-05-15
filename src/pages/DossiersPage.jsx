@@ -33,8 +33,9 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import DossierForm from "./../components/DossierForm"; // Importer DossierForm
 
-// Composant Avatar
+// Avatar Component
 const Avatar = ({ name, status }) => {
   const getColorFromName = (name) => {
     if (!name) return "#4F46E5";
@@ -126,6 +127,108 @@ const Avatar = ({ name, status }) => {
   );
 };
 
+// ObservationModal Component
+const ObservationModal = ({ isOpen, onClose, onSubmit, dossierId }) => {
+  const [contenu, setContenu] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!contenu.trim()) {
+      setError("L'observation ne peut pas être vide");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(
+        "https://fhn-backend-2.onrender.com/dossier_enfant/addObservation",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            dossierId,
+            contenu,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Erreur lors de l'ajout de l'observation"
+        );
+      }
+
+      onSubmit(dossierId, {
+        texte: data.data.contenu,
+        date: new Date(data.data.date),
+        auteur: data.data.auteur.nom || "Utilisateur",
+      });
+      setContenu("");
+      onClose();
+    } catch (err) {
+      console.error("Erreur lors de l'ajout de l'observation:", err);
+      setError(err.message || "Une erreur est survenue");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">
+            Ajouter une observation
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-full hover:bg-gray-100"
+          >
+            <X size={20} className="text-gray-600" />
+          </button>
+        </div>
+        <div className="mb-4">
+          <textarea
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows="5"
+            placeholder="Écrivez votre observation ici..."
+            value={contenu}
+            onChange={(e) => setContenu(e.target.value)}
+          />
+          {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+        </div>
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm ${
+              isLoading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+          >
+            {isLoading ? "Envoi..." : "Valider"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // DossierModal Component
 const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
   const [activeTab, setActiveTab] = useState("info");
@@ -155,7 +258,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
 
   if (!isOpen || !dossier) return null;
 
-  // Helper to format dates
   const formatDate = (date) => {
     if (!date) return "N/A";
     try {
@@ -165,10 +267,8 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
     }
   };
 
-  // Helper to display boolean values
   const formatBoolean = (value) => (value ? "Oui" : "Non");
 
-  // Get status badge styling
   const getStatusColor = (statut) => {
     switch (statut) {
       case "Nouveau":
@@ -223,7 +323,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
     }
   };
 
-  // Get eligibility status based on note
   const getEligibilityStatus = (note) => {
     if (note >= 80) {
       return {
@@ -249,7 +348,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
     }
   };
 
-  // Status options for the dropdown (sans accents)
   const statusOptions = [
     {
       value: "Incomplet",
@@ -275,7 +373,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
 
   const statusStyle = getStatusColor(dossier.statutDossier);
 
-  // Handle status change
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
     setSelectedStatus(newStatus);
@@ -306,7 +403,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
         throw new Error(data.message || "Erreur lors du changement de statut");
       }
 
-      // Update the dossier status locally and notify parent
       onStatusChange(dossier.id, newStatus);
     } catch (err) {
       console.error("Erreur lors du changement de statut:", err);
@@ -319,7 +415,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
     }
   };
 
-  // Toggle section expand/collapse
   const toggleSection = (section) => {
     setExpandedSections({
       ...expandedSections,
@@ -327,7 +422,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
     });
   };
 
-  // Render a detail row
   const DetailRow = ({ label, value, icon }) => (
     <div className="flex items-center py-2 border-b border-gray-100 last:border-0">
       <div className="flex items-center w-1/2 text-gray-600">
@@ -338,7 +432,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
     </div>
   );
 
-  // Section component
   const Section = ({ title, icon, id, children }) => (
     <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
       <div
@@ -363,7 +456,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30">
       <div className="bg-gray-50 rounded-xl shadow-xl max-w-5xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
         <div className="relative p-6 bg-green-700 text-white">
           <div className="absolute top-4 right-4">
             <button
@@ -423,7 +515,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
             </div>
           </div>
 
-          {/* Status Dropdown */}
           <div className="absolute top-6 right-16">
             <select
               className={`flex items-center space-x-2 px-4 py-2 rounded-md shadow-md transition-all border-l-4 ${statusStyle.accent} bg-white text-gray-800 hover:bg-gray-50 focus:outline-none`}
@@ -439,10 +530,8 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
             </select>
           </div>
 
-          {/* Error Message */}
           {error && <div className="mt-2 text-red-200 text-sm">{error}</div>}
 
-          {/* Tabs */}
           <div className="flex mt-6 space-x-2">
             <button
               className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
@@ -467,12 +556,10 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
           </div>
         </div>
 
-        {/* Body */}
         <div className="flex-1 overflow-auto p-4">
           {activeTab === "info" ? (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Enfant Information */}
                 <Section
                   title="Informations de l'enfant"
                   icon={<User size={18} className="text-blue-500" />}
@@ -524,7 +611,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
                   </div>
                 </Section>
 
-                {/* Parent/Tuteur */}
                 <Section
                   title="Parent/Tuteur"
                   icon={<User size={18} className="text-indigo-500" />}
@@ -549,7 +635,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
                   </div>
                 </Section>
 
-                {/* Scolarisation */}
                 <Section
                   title="Scolarisation"
                   icon={<Book size={18} className="text-green-500" />}
@@ -585,7 +670,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
                   </div>
                 </Section>
 
-                {/* Specific Details based on Etablissement */}
                 <Section
                   title={
                     dossier.etablissementId === 1
@@ -665,7 +749,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
                   </div>
                 </Section>
 
-                {/* Documents */}
                 <Section
                   title="Documents"
                   icon={<FileText size={18} className="text-purple-500" />}
@@ -705,7 +788,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
                   )}
                 </Section>
 
-                {/* Attentes et observations */}
                 <Section
                   title="Attentes et observations"
                   icon={<MessageSquare size={18} className="text-red-500" />}
@@ -725,7 +807,7 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
                         Observations
                       </p>
                       <p className="text-sm text-green-900">
-                        {dossier.observation || "Non spécifié"}
+                        {dossier.observations || "Non spécifié"}
                       </p>
                     </div>
                   </div>
@@ -734,33 +816,24 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Observations History */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
                 <h3 className="font-semibold text-lg mb-4 flex items-center">
                   <Calendar size={18} className="text-blue-500 mr-2" />
                   Historique des observations
                 </h3>
-                {dossier.observations && dossier.observations.length > 0 ? (
+                {dossier.observations ? (
                   <div className="space-y-4">
-                    {dossier.observations.map((obs, idx) => (
-                      <div
-                        key={idx}
-                        className="relative pl-6 pb-6 border-l-2 border-blue-200 last:border-0"
-                      >
-                        <div className="absolute -left-2 top-0">
-                          <div className="w-4 h-4 rounded-full bg-blue-500"></div>
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-gray-800">{obs.texte || obs}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {obs.date
-                              ? formatDate(obs.date)
-                              : formatDate(dossier.dateCreation)}{" "}
-                            • {obs.auteur || "Système"}
-                          </p>
-                        </div>
+                    <div
+                      key={idx}
+                      className="relative pl-6 pb-6 border-l-2 border-blue-200 last:border-0"
+                    >
+                      <div className="absolute -left-2 top-0">
+                        <div className="w-4 h-4 rounded-full bg-blue-500"></div>
                       </div>
-                    ))}
+                      <div className="ml-4">
+                        <p className="text-gray-800">{dossier.observations}</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="py-10 text-center text-gray-500 italic bg-gray-50 rounded-lg">
@@ -772,7 +845,6 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-4 border-t border-gray-200 flex justify-between items-center bg-gray-50">
           <div className="text-xs text-gray-500">
             Dossier #{dossier.id} • Dernière modification:{" "}
@@ -795,6 +867,83 @@ const DossierModal = ({ dossier, isOpen, onClose, onStatusChange }) => {
   );
 };
 
+// NewDossierModal Component
+const NewDossierModal = ({ isOpen, onClose, onSubmit, documentTypes }) => {
+  const [formType, setFormType] = useState(null);
+
+  if (!isOpen) return null;
+
+  const resetForm = () => {
+    setFormType(null);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/30">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-800">
+            Nouvelle demande d'inscription
+          </h3>
+          <button
+            onClick={resetForm}
+            className="p-2 rounded-full hover:bg-gray-100"
+          >
+            <X size={20} className="text-gray-600" />
+          </button>
+        </div>
+        {!formType ? (
+          <div className="p-6">
+            <h4 className="text-md font-medium text-gray-900 mb-4">
+              Sélectionnez le type de dossier
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => setFormType("TARII")}
+                className="p-4 border border-gray-300 rounded-md text-left hover:bg-gray-50"
+              >
+                <h5 className="text-sm font-medium text-gray-900">
+                  TARII - Déficience intellectuelle
+                </h5>
+                <p className="text-sm text-gray-500">
+                  Pour autisme ou déficiences intellectuelles.
+                </p>
+              </button>
+              <button
+                onClick={() => setFormType("WISI")}
+                className="p-4 border border-gray-300 rounded-md text-left hover:bg-gray-50"
+              >
+                <h5 className="text-sm font-medium text-gray-900">
+                  WISI - Déficience visuelle
+                </h5>
+                <p className="text-sm text-gray-500">
+                  Pour cécité ou basse vision.
+                </p>
+              </button>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={resetForm}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <DossierForm
+            onSubmit={onSubmit}
+            onCancel={resetForm}
+            documentTypes={documentTypes}
+            formType={formType}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// DossiersPage Component
 const DossiersPage = () => {
   const [dossiers, setDossiers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -808,7 +957,31 @@ const DossiersPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedDossier, setSelectedDossier] = useState(null);
+  const [isObservationModalOpen, setIsObservationModalOpen] = useState(false);
+  const [selectedDossierId, setSelectedDossierId] = useState(null);
+  const [isNewDossierModalOpen, setIsNewDossierModalOpen] = useState(false); // Nouvel état pour la modale
   const navigate = useNavigate();
+
+  // Types de documents
+  const documentTypes = [
+    { id: 1, value: "acte_naissance", label: "Acte de naissance" },
+    { id: 2, value: "livret_familial", label: "Livret familial" },
+    { id: 3, value: "carte_identite", label: "Carte d’identité" },
+    { id: 4, value: "carte_sejour", label: "Carte de séjour" },
+    { id: 5, value: "carnet_vaccinations", label: "Carnet de vaccinations" },
+    { id: 6, value: "bilan_ophtalmologique", label: "Bilan ophtalmologique" },
+    { id: 7, value: "bilan_orthoptique", label: "Bilan orthoptique" },
+    {
+      id: 8,
+      value: "comptes_rendus_medicaux",
+      label: "Comptes rendus médicaux",
+    },
+    {
+      id: 9,
+      value: "comptes_rendus_paramedicaux",
+      label: "Comptes rendus paramédicaux",
+    },
+  ];
 
   useEffect(() => {
     const fetchDossiers = async () => {
@@ -840,10 +1013,9 @@ const DossiersPage = () => {
           );
         }
         const data = await response.json();
-        // Simuler le champ note (à supprimer une fois que l'API le fournit)
         const dossiersWithNote = (data.data || []).map((dossier) => ({
           ...dossier,
-          note: Math.floor(Math.random() * 101),
+          note: dossier.note, // Use backend-provided note
         }));
         setDossiers(dossiersWithNote);
       } catch (err) {
@@ -859,7 +1031,6 @@ const DossiersPage = () => {
     fetchDossiers();
   }, [navigate]);
 
-  // Helper to format dates
   const formatDate = (date) => {
     if (!date) return "N/A";
     try {
@@ -967,7 +1138,6 @@ const DossiersPage = () => {
     }
   };
 
-  // Handle status change from modal
   const handleStatusChange = (dossierId, newStatus) => {
     setDossiers((prevDossiers) =>
       prevDossiers.map((d) =>
@@ -976,6 +1146,151 @@ const DossiersPage = () => {
     );
     if (selectedDossier && selectedDossier.id === dossierId) {
       setSelectedDossier((prev) => ({ ...prev, statutDossier: newStatus }));
+    }
+  };
+
+  const handleObservationSubmit = (dossierId, newObservation) => {
+    setDossiers((prevDossiers) =>
+      prevDossiers.map((d) =>
+        d.id === dossierId
+          ? {
+              ...d,
+              observations: d.observations
+                ? [...d.observations, newObservation]
+                : [newObservation],
+            }
+          : d
+      )
+    );
+    if (selectedDossier && selectedDossier.id === dossierId) {
+      setSelectedDossier((prev) => ({
+        ...prev,
+        observations: prev.observations
+          ? [...prev.observations, newObservation]
+          : [newObservation],
+      }));
+    }
+  };
+
+  const openObservationModal = (dossierId) => {
+    setSelectedDossierId(dossierId);
+    setIsObservationModalOpen(true);
+  };
+
+  // Logique de soumission du formulaire
+  const handleSubmit = async (formData) => {
+    const formDataToSend = new FormData();
+    const fields = {
+      nom: formData.nom,
+      date_naissance: formData.dateNaissance,
+      sexe: formData.sexe === "Masculin" ? "M" : "F",
+      commune: formData.commune,
+      diagnostic: formData.diagnostic,
+      est_scolarise: formData.estScolarise,
+      niveau_scolaire: formData.niveauScolaire || "",
+      ancien_etablissement: formData.ancienEtablissement || "",
+      activites_quotidiennes: formData.activitesQuotidiennes,
+      parentNom: formData.parentNom,
+      parentTelephone: formData.parentTelephone,
+      parentEmail: formData.parentEmail,
+      attente: formData.attente || "",
+      observation: formData.observation || "",
+      etablissementId: formData.etablissementId.toString(),
+      date_creation: formData.dateCreation,
+    };
+
+    if (formData.etablissementId === 1) {
+      fields.suivi_orthophonique = formData.suiviOrthophonique;
+      fields.suivi_psychologique = formData.suiviPsychologique;
+      fields.psychomotricien = formData.psychomotricien;
+      fields.tradipracticien = formData.tradipracticien;
+    } else if (formData.etablissementId === 2) {
+      fields.a_consulte_ophtalmo = formData.aConsulteOphtalmo;
+      fields.a_autre_suivi_medical = formData.aAutreSuiviMedical;
+      fields.details_suivi_medical = formData.detailsSuiviMedical || "";
+      fields.a_perception_visuelle = formData.aPerceptionVisuelle;
+      fields.est_aveugle = formData.estAveugle;
+    }
+
+    Object.keys(fields).forEach((key) => {
+      const value = fields[key];
+      if (value !== undefined && value !== null) {
+        formDataToSend.append(key, value.toString());
+      }
+    });
+
+    const filesInfo = formData.documents.map((doc) => ({
+      natureId: doc.type.toString(),
+    }));
+
+    formData.documents.forEach((doc) => {
+      formDataToSend.append("fichiers", doc.file);
+    });
+
+    formDataToSend.append("filesInfo", JSON.stringify(filesInfo));
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        alert("Vous devez être connecté.");
+        navigate("/");
+        return;
+      }
+
+      const response = await fetch(
+        "https://fhn-backend-2.onrender.com/dossier_enfant",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formDataToSend,
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) {
+        if (result.errors && Array.isArray(result.errors)) {
+          const errorMessages = result.errors
+            .map((err) => err.msg || err.message)
+            .join("\n- ");
+          alert("Erreur(s) de validation :\n- " + errorMessages);
+        } else {
+          alert(
+            result.message || `Erreur ${response.status}: Problème serveur.`
+          );
+        }
+        return;
+      }
+
+      // Rafraîchir la liste des dossiers
+      const fetchDossiers = async () => {
+        try {
+          const response = await fetch(
+            "https://fhn-backend-2.onrender.com/dossier_enfant",
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(
+              data.message || "Erreur lors de la récupération des dossiers"
+            );
+          }
+          setDossiers(data.data || []);
+        } catch (err) {
+          setError(err.message);
+        }
+      };
+      await fetchDossiers();
+      setIsNewDossierModalOpen(false);
+      alert("Demande soumise avec succès !");
+    } catch (error) {
+      console.error("Erreur lors de la soumission:", error);
+      alert(`Une erreur est survenue : ${error.message}`);
     }
   };
 
@@ -998,7 +1313,10 @@ const DossiersPage = () => {
       )}
 
       <div className="flex flex-wrap gap-3 mb-6 justify-between">
-        <button className="bg-green-600 rounded-lg shadow-sm px-4 py-2.5 flex items-center text-sm text-white hover:bg-green-700 transition-colors">
+        <button
+          className="bg-green-600 rounded-lg shadow-sm px-4 py-2.5 flex items-center text-sm text-white hover:bg-green-700 transition-colors"
+          onClick={() => setIsNewDossierModalOpen(true)} // Ouvre la modale
+        >
           <Plus size={16} className="mr-2" />
           Nouveau dossier
         </button>
@@ -1245,7 +1563,12 @@ const DossiersPage = () => {
                                 >
                                   <Eye size={18} />
                                 </button>
-                                <button className="text-gray-600 hover:text-gray-900">
+                                <button
+                                  className="text-gray-600 hover:text-gray-900"
+                                  onClick={() =>
+                                    openObservationModal(dossier.id)
+                                  }
+                                >
                                   <Pencil size={18} />
                                 </button>
                                 <button className="text-red-600 hover:text-red-900">
@@ -1343,17 +1666,16 @@ const DossiersPage = () => {
                                 </span>
                               </span>
                             </div>
-                            {dossier.observations &&
-                              dossier.observations.length > 0 && (
-                                <div className="text-sm mt-2">
-                                  <span className="text-gray-500">
-                                    Observation:
-                                  </span>
-                                  <p className="text-gray-700 mt-1 italic">
-                                    {dossier.observations[0]}
-                                  </p>
-                                </div>
-                              )}
+                            {dossier.observations && (
+                              <div className="text-sm mt-2">
+                                <span className="text-gray-500">
+                                  Observation:
+                                </span>
+                                <p className="text-gray-700 mt-1 italic">
+                                  {dossier.observations}
+                                </p>
+                              </div>
+                            )}
                           </div>
                           <div className="mt-4 pt-3 border-t flex justify-between items-center">
                             <div className="text-xs text-gray-500">
@@ -1372,7 +1694,10 @@ const DossiersPage = () => {
                               >
                                 <Eye size={18} />
                               </button>
-                              <button className="p-1 text-gray-600 hover:text-gray-900">
+                              <button
+                                className="p-1 text-gray-600 hover:text-gray-900"
+                                onClick={() => openObservationModal(dossier.id)}
+                              >
                                 <Pencil size={18} />
                               </button>
                               <button className="p-1 text-red-600 hover:text-red-900">
@@ -1466,6 +1791,23 @@ const DossiersPage = () => {
         isOpen={!!selectedDossier}
         onClose={() => setSelectedDossier(null)}
         onStatusChange={handleStatusChange}
+      />
+
+      <ObservationModal
+        isOpen={isObservationModalOpen}
+        onClose={() => {
+          setIsObservationModalOpen(false);
+          setSelectedDossierId(null);
+        }}
+        onSubmit={handleObservationSubmit}
+        dossierId={selectedDossierId}
+      />
+
+      <NewDossierModal
+        isOpen={isNewDossierModalOpen}
+        onClose={() => setIsNewDossierModalOpen(false)}
+        onSubmit={handleSubmit}
+        documentTypes={documentTypes}
       />
     </main>
   );
