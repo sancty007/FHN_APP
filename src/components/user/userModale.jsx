@@ -6,6 +6,7 @@ import PropTypes from "prop-types";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "../toast";
+import { useNavigate } from "react-router-dom";
 
 // Define the form schema with Zod
 const formSchema = z.object({
@@ -23,6 +24,8 @@ const formSchema = z.object({
 
 export function UserModal({ showModal, setShowModal, onUserCreated }) {
   const { toast, Toasts } = useToast();
+  const authToken = localStorage.getItem("authToken");
+  const navigate = useNavigate();
 
   // Initialize React Hook Form
   const form = useForm({
@@ -31,7 +34,7 @@ export function UserModal({ showModal, setShowModal, onUserCreated }) {
       nom: "",
       email: "",
       mot_de_passe: "",
-      role: "analyste",
+      role: "",
     },
   });
 
@@ -44,23 +47,98 @@ export function UserModal({ showModal, setShowModal, onUserCreated }) {
 
   if (!showModal) return null;
 
-  const onSubmit = (data) => {
-    // Envoi des données au composant parent
-    onUserCreated(data);
-    // Envoi des données (à adapter avec Axios par exemple)
-    console.log("Utilisateur à créer :", data);
+  const validateToken = async () => {
+    try {
+      const response = await fetch(
+        "https://fhn-backend-2.onrender.com/auth/checkAuth",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          credentials: "include",
+        }
+      );
+      return response.ok;
+    } catch (error) {
+      console.error("Token validation failed:", error);
+      return false;
+    }
+  };
 
-    // Afficher un message de succès
-    toast({
-      title: "Utilisateur créé",
-      description: "L'utilisateur a été créé avec succès",
-    });
+  const onSubmit = async (formData) => {
+    try {
+      if (!authToken) {
+        throw new Error("Vous n'êtes pas connecté. Veuillez vous connecter.");
+      }
 
-    // Réinitialiser le formulaire
-    reset();
+      // Validate token
+      const isTokenValid = await validateToken();
+      if (!isTokenValid) {
+        localStorage.clear();
+        navigate("/");
+        throw new Error("Session expirée. Veuillez vous reconnecter.");
+      }
 
-    // Fermer la modale après soumission
-    setShowModal(false);
+      // Check user role
+      const userRole = localStorage.getItem("role");
+      if (userRole !== "admin") {
+        throw new Error(
+          "Vous n'avez pas les permissions nécessaires pour créer un utilisateur."
+        );
+      }
+
+      // Transform data for API
+      const apiData = {
+        name: formData.nom,
+        email: formData.email,
+        password: formData.mot_de_passe,
+        role: formData.role,
+      };
+
+      console.log("Sending request with token:", authToken);
+      console.log("Request payload:", apiData);
+
+      // Send data to API
+      const response = await fetch("https://fhn-backend-2.onrender.com/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(apiData),
+        credentials: "include",
+      });
+
+      const responseData = await response.json();
+      console.log("Response status:", response.status, "Data:", responseData);
+
+      if (!response.ok) {
+        throw new Error(
+          responseData.message || "Erreur lors de la création de l'utilisateur"
+        );
+      }
+
+      onUserCreated(responseData);
+      toast({
+        title: "Utilisateur créé",
+        description: "L'utilisateur a été créé avec succès",
+      });
+
+      reset();
+      setShowModal(false);
+    } catch (error) {
+      console.error(
+        "Erreur lors de la création de l'utilisateur:",
+        error.message
+      );
+      toast({
+        title: "Erreur",
+        description:
+          error.message ||
+          "Une erreur est survenue lors de la création de l'utilisateur",
+      });
+    }
   };
 
   return (
@@ -138,8 +216,12 @@ export function UserModal({ showModal, setShowModal, onUserCreated }) {
                 className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 ${
                   errors.role ? "border-red-500" : "border-gray-300"
                 }`}
-                {...register("role")}
+                {...register("role", { required: true })}
+                defaultValue=""
               >
+                <option value="" disabled>
+                  Sélectionnez un rôle
+                </option>
                 <option value="analyste">Analyste</option>
                 <option value="secretaire">Secrétaire</option>
               </select>

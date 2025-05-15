@@ -10,7 +10,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserModal } from "../components/user/userModale";
 
 const UtilisateursPage = () => {
@@ -18,13 +18,41 @@ const UtilisateursPage = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Fetch users from API on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(
+          "https://fhn-backend-2.onrender.com/users",
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+            credentials: "include",
+          }
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch users");
+        }
+        const data = await response.json();
+        console.log("Fetched users:", data.data); // Debug API response
+        setUsers(data.data || []);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
+    };
+    fetchUsers();
+  }, []);
+
   // Fonction pour générer des avatars basés sur les initiales
   const getInitials = (name) => {
     return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
+      ? name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+      : "";
   };
 
   // Fonction pour générer une couleur d'arrière-plan basée sur le nom
@@ -37,14 +65,28 @@ const UtilisateursPage = () => {
       "bg-pink-100 text-pink-600",
       "bg-indigo-100 text-indigo-600",
     ];
-    const index = name.charCodeAt(0) % colors.length;
+    const index = name ? name.charCodeAt(0) % colors.length : 0;
     return colors[index];
   };
 
-  const handleAddUser = (newUser) => {
+  const handleAddUser = (responseData) => {
+    // Extract the user object from responseData.data
+    const newUser = responseData.data || responseData;
+    console.log("New user received:", newUser); // Debug new user
     setUsers((prevUsers) => {
-      return [...prevUsers, { ...newUser, id: Date.now() }];
+      const updatedUsers = [
+        ...prevUsers,
+        {
+          id: newUser.id || Date.now(), // Use API-provided ID or fallback
+          nom: newUser.name || newUser.nom || "", // Handle both 'name' and 'nom'
+          email: newUser.email || "",
+          role: newUser.role || "",
+        },
+      ];
+      console.log("Updated users:", updatedUsers); // Debug updated list
+      return updatedUsers;
     });
+    setShowModal(false);
   };
 
   const handleDeleteUser = (userId) => {
@@ -56,11 +98,14 @@ const UtilisateursPage = () => {
   };
 
   // Filtrer les utilisateurs en fonction du terme de recherche
-  const filteredUsers = users.filter(
-    (user) =>
-      user.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter((user) => {
+    const nom = user.nom || ""; // Fallback to empty string
+    const email = user.email || ""; // Fallback to empty string
+    const query = searchTerm.toLowerCase();
+    return (
+      nom.toLowerCase().includes(query) || email.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <main className="p-4 md:p-6 lg:p-8 bg-gray-50 min-h-screen">
@@ -246,7 +291,7 @@ const UtilisateursPage = () => {
           </div>
         )}
 
-        {/* Pied de page avec pagination (à implémenter si nécessaire) */}
+        {/* Pied de page avec pagination */}
         {users.length > 0 && (
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
             <div className="text-sm text-gray-500">
